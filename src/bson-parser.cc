@@ -1,6 +1,8 @@
 #include <fstream>
 #include <iostream>
 
+#include "bson.hh"
+
 static inline auto load_bson(char* file_name)
 {
     std::ifstream f(file_name);
@@ -21,7 +23,9 @@ int main(int argc, char** argv)
         return 1;
     }
 
+#ifdef NDEBUG
     try {
+#endif
         // Try parsing all BSON documents from the BSON file.
         auto bson_docs = load_bson(argv[1]);
 
@@ -31,6 +35,7 @@ int main(int argc, char** argv)
 
         // Dump all BSON documents
         bson_docs.dump();
+#ifdef NDEBUG
     }
     catch (std::runtime_error& ex)
     {
@@ -38,6 +43,7 @@ int main(int argc, char** argv)
 
         return 1;
     }
+#endif
 
     return 0;
 }

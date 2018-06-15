@@ -1,6 +1,10 @@
 #pragma once
 
 #include <istream>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 /* interface */ class bson_element
 {
@@ -22,7 +26,7 @@ public:
     void dump(void) const final;
 
 private:
-    std::unordered_map<std::string, bson_element> elems_;
+    std::unordered_map<std::string, std::shared_ptr<bson_element>> elems_;
 };
 
 class bson
@@ -32,6 +36,11 @@ public:
 
     void dump(void) const;
 
+    auto size(void)
+    {
+        return docs_.size();
+    }
+
 private:
-    std::vector<bson_document> docs_;
+    std::vector<std::shared_ptr<bson_document>> docs_;
 };

@@ -1,44 +1,46 @@
 #include "bson.hh"
 
 #include <cassert>
-#include <vector>
-#include <unordered_map>
+#include <cstdint>
+#include <ios>
+#include <memory>
 
-bson_document::bson(std::istream& s)
+bson_document::bson_document(std::istream& s)
 {
     // Add exception on EOF to prevent parsing errors
-    s.exceptions(std::ifstream::failbit | std::ifstream::eofbit);
+    s.exceptions(std::ios_base::failbit | std::ios_base::eofbit);
+
+    std::uint32_t size;
+
+    s.read(reinterpret_cast<char*>(&size), sizeof(size));
 
     while (true)
     {
-        // Allow EOF here (in case of 0)
-        s.exceptions(std::ifstream::failbit);
-
-        char c = s.peek();
+        char c = s.get();
 
         if (!c)
+        {
+            // Allow EOF here (in case of 0)
+            s.exceptions(std::ios_base::failbit);
+
             return;
-
-        // Restore normal state
-        s.exceptions(std::ifstream::failbit | std::ifstream::eofbit);
-
-        assert(c == s.get());
+        }
     }
 }
 
-void bson_document::dump(void)
+void bson_document::dump(void) const
 {
-    assert(!"Not implemented");
+    std::assert(!"Not implemented");
 }
 
 bson::bson(std::istream& s)
 {
-    while (!s.eof())
-        docs_.emplace_back(bson_document(s));
+    while (s.peek() != std::istream::traits_type::eof())
+        docs_.emplace_back(std::make_shared<bson_document>(s));
 }
 
-void bson::dump(void)
+void bson::dump(void) const
 {
     for (auto doc: docs_)
-        doc.dump();
+        doc->dump();
 }
