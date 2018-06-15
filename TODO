@@ -1,2 +1,3 @@
 * Requirements
+* std::vector<char> version (to comply with requirements)
 * Tests
