@@ -1,11 +1,16 @@
+#include <cerrno>
 #include <fstream>
 #include <iostream>
+#include <system_error>
 
 #include "bson.hh"
 
 static inline auto load_bson(char* file_name)
 {
     std::ifstream f(file_name);
+
+    if (!f)
+        throw std::system_error(errno, std::system_category());
 
     // Throw an exception if IO fails
     f.exceptions(std::ifstream::failbit);
@@ -34,7 +39,7 @@ int main(int argc, char** argv)
             << std::endl;
 
         // Dump all BSON documents
-        bson_docs.dump();
+        bson_docs.dump(std::cout);
 #ifdef NDEBUG
     }
     catch (std::runtime_error& ex)
