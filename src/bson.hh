@@ -1,13 +1,15 @@
 #pragma once
 
+#include <functional>
 #include <istream>
 #include <memory>
 #include <ostream>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
-/* interface */ class bson_element
+/* abstract */ class bson_element
 {
 public:
     virtual void dump(std::ostream& s) const = 0;
@@ -19,8 +21,21 @@ protected:
     bson_element& operator=(const bson_element&) = delete;
 };
 
-template <typename T>
-class bson_generic: public bson_element
+class bson;
+
+template <char Id>
+/* abstract */ class bson_element_base: public bson_element
+{
+	friend bson;
+
+	static constexpr char id(void)
+	{
+		return Id;
+	}
+};
+
+template <typename T, const char* Name = nullptr, char Id = 0>
+class bson_generic: public bson_element_base<Id>
 {
 public:
     bson_generic(std::istream& s)
@@ -35,14 +50,19 @@ public:
 
     void dump(std::ostream& s) const final
     {
-        s << t_;
+		static constexpr std::string_view name(Name);
+
+        s << name << "(" << t_ << ")";
     }
 
 private:
     T t_;
 };
 
-class bson_document: public bson_element
+const char name_double[] = "bson_double";
+using bson_double = bson_generic<double, name_double, 0x1>;
+
+class bson_document: public bson_element_base<0x3>
 {
 public:
     bson_document(std::istream& s);
@@ -52,6 +72,9 @@ public:
 private:
     std::unordered_map<std::string, std::shared_ptr<bson_element>> elems_;
 };
+
+#define BSON_ELEM(Type) \
+{ Type::id(), [] (std::istream& s) { return std::make_shared<Type>(s); } }
 
 class bson
 {
@@ -64,6 +87,23 @@ public:
     {
         return docs_.size();
     }
+
+	static auto factory(char id)
+	{
+		static const std::unordered_map<
+			char,
+			std::function<std::shared_ptr<bson_element>(std::istream&)>
+		> map {
+			BSON_ELEM(bson_double),
+			BSON_ELEM(bson_document)
+		};
+
+#ifdef NDEBUG
+		return map[id];
+#else
+		return map.at(id);
+#endif
+	}
 
 private:
     std::vector<std::shared_ptr<bson_document>> docs_;

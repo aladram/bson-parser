@@ -54,12 +54,14 @@ bson_document::bson_document(std::istream& s)
             // Allow EOF here (in case of 0)
             s.exceptions(std::ios_base::failbit);
 
-            return;
+	        return;
         }
 
         std::string name = extract_cstring(s);
 
-        // ...
+		auto elem = bson::factory(c)(s);
+
+		(void)elem;
     }
 
     throw std::runtime_error("Document exceeds given size");
