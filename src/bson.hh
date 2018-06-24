@@ -13,6 +13,7 @@
 {
 public:
     virtual void dump(std::ostream& s) const = 0;
+    virtual std::uint32_t size(void) const = 0;
 
 protected:
     bson_element() = default;
@@ -26,12 +27,12 @@ class bson;
 template <char Id>
 /* abstract */ class bson_element_base: public bson_element
 {
-	friend bson;
+    friend bson;
 
-	static constexpr char id(void)
-	{
-		return Id;
-	}
+    static constexpr char id(void)
+    {
+        return Id;
+    }
 };
 
 template <typename T, const char* Name = nullptr, char Id = 0>
@@ -50,16 +51,21 @@ public:
 
     void dump(std::ostream& s) const final
     {
-		static constexpr std::string_view name(Name);
+        static constexpr std::string_view name(Name);
 
         s << name << "(" << t_ << ")";
+    }
+
+    std::uint32_t size(void) const final
+    {
+        return sizeof(T);
     }
 
 private:
     T t_;
 };
 
-const char name_double[] = "bson_double";
+static const char name_double[] = "bson_double";
 using bson_double = bson_generic<double, name_double, 0x1>;
 
 class bson_document: public bson_element_base<0x3>
@@ -69,8 +75,15 @@ public:
 
     void dump(std::ostream& s) const final;
 
+    std::uint32_t size(void) const final
+    {
+        return size_;
+    }
+
 private:
     std::unordered_map<std::string, std::shared_ptr<bson_element>> elems_;
+
+    std::uint32_t size_;
 };
 
 #define BSON_ELEM(Type) \
@@ -88,22 +101,18 @@ public:
         return docs_.size();
     }
 
-	static auto factory(char id)
-	{
-		static const std::unordered_map<
-			char,
-			std::function<std::shared_ptr<bson_element>(std::istream&)>
-		> map {
-			BSON_ELEM(bson_double),
-			BSON_ELEM(bson_document)
-		};
+    static auto factory(char id)
+    {
+        static const std::unordered_map<
+            char,
+            std::function<std::shared_ptr<bson_element>(std::istream&)>
+        > map {
+            BSON_ELEM(bson_double),
+            BSON_ELEM(bson_document)
+        };
 
-#ifdef NDEBUG
-		return map[id];
-#else
-		return map.at(id);
-#endif
-	}
+        return map.at(id);
+    }
 
 private:
     std::vector<std::shared_ptr<bson_document>> docs_;

@@ -36,32 +36,36 @@ bson_document::bson_document(std::istream& s)
     // Add exception on EOF to prevent parsing errors
     s.exceptions(std::ios_base::failbit | std::ios_base::eofbit);
 
-    std::uint32_t size = bson_generic<std::uint32_t>(s).value();
+    size_ = bson_generic<std::uint32_t>(s).value();
 
-    //DEBUG
-    //s.read(std::string(size - 5, '\0').data(), size - 5);
-    //END DEBUG
+    auto size = sizeof(size_);
 
-    for (size -= sizeof(size); size; --size)
+    while (size < size_)
     {
         char c = s.get();
+        
+        ++size;
 
         if (!c)
         {
-            if (size != 1)
+            if (size != size_)
                 throw std::runtime_error("Incorrect size");
 
             // Allow EOF here (in case of 0)
             s.exceptions(std::ios_base::failbit);
 
-	        return;
+            return;
         }
 
         std::string name = extract_cstring(s);
 
-		auto elem = bson::factory(c)(s);
+        size += name.length() + 1;
 
-		(void)elem;
+        auto elem = bson::factory(c)(s);
+
+        size += elem->size();
+
+        elems_[std::move(name)] = std::move(elem);
     }
 
     throw std::runtime_error("Document exceeds given size");
