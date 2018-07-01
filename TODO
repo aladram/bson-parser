@@ -1,3 +1,4 @@
 * Requirements
+* Move bson_document impl. to a .hxx file (because of templates)
 * std::vector<char> version (to comply with requirements)
 * Tests

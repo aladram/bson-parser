@@ -21,7 +21,7 @@ std::ostream& operator<<(std::ostream& os, bson_element* e)
     return os;
 }
 
-static std::string extract_cstring(std::istream& s)
+std::string extract_cstring(std::istream& s)
 {
     std::string str;
 
@@ -31,7 +31,8 @@ static std::string extract_cstring(std::istream& s)
     return str;
 }
 
-bson_document::bson_document(std::istream& s)
+template <typename T, char U>
+bson_document<T, U>::bson_document(std::istream& s)
 {
     // Add exception on EOF to prevent parsing errors
     s.exceptions(std::ios_base::failbit | std::ios_base::eofbit);
@@ -59,6 +60,12 @@ bson_document::bson_document(std::istream& s)
 
         std::string name = extract_cstring(s);
 
+        /*
+         * Compiler may remove this call if policy is no_name_policy and
+         * optimizations are on (because of final keyword on validate_name)
+         */
+        policy_.validate_name(name);
+
         size += name.length() + 1;
 
         auto elem = bson::factory(c)(s);
@@ -71,24 +78,25 @@ bson_document::bson_document(std::istream& s)
     throw std::runtime_error("Document exceeds given size");
 }
 
-void bson_document::dump(std::ostream& s) const
+template<typename T, char U>
+void bson_document<T, U>::dump(std::ostream& s) const
 {
-    s << "bson_document (" << elems_.size() << " fields) {" << std::endl;
+    s << "bson_document(" << elems_.size() << " fields) {" << std::endl;
 
     for (auto const& [key, value]: elems_)
         s << "\"" << key << "\": " << value << std::endl;
 
-    s << "}" << std::endl;
+    s << "}";
 }
 
 bson::bson(std::istream& s)
 {
     while (s.peek() != std::istream::traits_type::eof())
-        docs_.emplace_back(std::make_shared<bson_document>(s));
+        docs_.emplace_back(std::make_shared<bson_document<>>(s));
 }
 
 void bson::dump(std::ostream& s) const
 {
     for (auto doc: docs_)
-        s << doc;
+        s << doc << std::endl;
 }

@@ -5,9 +5,11 @@
 #include <memory>
 #include <ostream>
 #include <string>
-#include <string_view>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
+
+std::string extract_cstring(std::istream& s);
 
 /* abstract */ class bson_element
 {
@@ -65,11 +67,80 @@ private:
     T t_;
 };
 
-static const char name_double[] = "bson_double";
-using bson_double = bson_generic<double, name_double, 0x1>;
+#define NEW_BSON_TYPE(Id, Name, Type) \
+static const char name_ ## Name[] = "bson_"#Name; \
+using bson_ ## Name = bson_generic<Type, name_ ## Name, Id>
 
-class bson_document: public bson_element_base<0x3>
+static_assert(sizeof(double) == 8, "double size required to be 8 bytes");
+
+NEW_BSON_TYPE(0x1, double, double);
+NEW_BSON_TYPE(0x8, boolean, std::uint8_t);
+NEW_BSON_TYPE(0x10, int32, std::int32_t);
+NEW_BSON_TYPE(0x11, timestamp, std::uint64_t);
+NEW_BSON_TYPE(0x12, int64, std::int64_t);
+
+class bson_regex: bson_element_base<0xB>
 {
+public:
+    bson_regex(std::istream& s)
+        : pattern_(extract_cstring(s))
+        , options_(extract_cstring(s))
+    {}
+
+    void dump(std::ostream& s) const final
+    {
+        s << "bson_regex(pattern: " << pattern_
+            << ", options: " << options_ << ")";
+    }
+
+    std::uint32_t size(void) const final
+    {
+        return pattern_.size() + 1 + options_.size() + 1;
+    }
+
+private:
+    std::string pattern_;
+
+    std::string options_;
+};
+
+/* interface */ class name_policy
+{
+    virtual void validate_name(const std::string& name) = 0;
+};
+
+class no_name_policy: public name_policy
+{
+public:
+    void validate_name(const std::string& name) final
+    {
+        (void)name;
+    }
+};
+
+class numeric_name_policy: public name_policy
+{
+public:
+    void validate_name(const std::string& name) final
+    {
+        if (name != std::to_string(i_))
+            throw std::runtime_error("");
+
+        ++i_;
+    }
+
+private:
+    std::uint32_t i_ = 0;
+};
+
+template <typename NamePolicy = no_name_policy, char Id = 0x3>
+class bson_document: public bson_element_base<Id>
+{
+    static_assert(
+        std::is_base_of<name_policy, NamePolicy>::value,
+        "NamePolicy is not derived from name_policy class"
+    );
+
 public:
     bson_document(std::istream& s);
 
@@ -84,7 +155,11 @@ private:
     std::unordered_map<std::string, std::shared_ptr<bson_element>> elems_;
 
     std::uint32_t size_;
+
+    NamePolicy policy_;
 };
+
+using bson_array = bson_document<numeric_name_policy, 0x4>;
 
 #define BSON_ELEM(Type) \
 { Type::id(), [] (std::istream& s) { return std::make_shared<Type>(s); } }
@@ -108,12 +183,16 @@ public:
             std::function<std::shared_ptr<bson_element>(std::istream&)>
         > map {
             BSON_ELEM(bson_double),
-            BSON_ELEM(bson_document)
+            BSON_ELEM(bson_document<>),
+            BSON_ELEM(bson_boolean),
+            BSON_ELEM(bson_int32),
+            BSON_ELEM(bson_timestamp),
+            BSON_ELEM(bson_int64)
         };
 
         return map.at(id);
     }
 
 private:
-    std::vector<std::shared_ptr<bson_document>> docs_;
+    std::vector<std::shared_ptr<bson_document<>>> docs_;
 };
