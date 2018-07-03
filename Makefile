@@ -1,10 +1,10 @@
 CC = g++
 
-CPPFLAGS = -MMD
+CPPFLAGS = -MMD -Isrc/ -Isrc/types/
 
 CXXFLAGS = -Wall -Werror -Wextra -std=c++17 -pedantic
 
-VPATH = src
+VPATH = src:src/types
 
 FILES = \
         bson.cc \

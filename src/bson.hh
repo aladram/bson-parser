@@ -9,33 +9,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include "bson-base.hh"
+
 std::string extract_cstring(std::istream& s);
-
-/* abstract */ class bson_element
-{
-public:
-    virtual void dump(std::ostream& s) const = 0;
-    virtual std::uint32_t size(void) const = 0;
-
-protected:
-    bson_element() = default;
-
-    bson_element(const bson_element&) = delete;
-    bson_element& operator=(const bson_element&) = delete;
-};
-
-class bson;
-
-template <char Id>
-/* abstract */ class bson_element_base: public bson_element
-{
-    friend bson;
-
-    static constexpr char id(void)
-    {
-        return Id;
-    }
-};
 
 template <typename T, const char* Name = nullptr, char Id = 0>
 class bson_generic: public bson_element_base<Id>
@@ -103,120 +79,22 @@ private:
     std::string options_;
 };
 
-/* interface */ class name_policy
-{
-    virtual void validate_name(const std::string& name) = 0;
-};
+#define BSON_ELEM(Type) \
+{ Type::id(), [] (std::istream& s) { return std::make_shared<Type>(s); } }
 
-class no_name_policy: public name_policy
-{
-public:
-    void validate_name(const std::string& name) final
-    {
-        (void)name;
-    }
-};
+template <typename T, typename U, char V>
+class bson_document_base;
 
-class numeric_name_policy: public name_policy
-{
-public:
-    void validate_name(const std::string& name) final
-    {
-        if (name != std::to_string(i_))
-            throw std::runtime_error("");
+class no_name_policy;
+class numeric_name_policy;
 
-        ++i_;
-    }
-
-private:
-    std::uint32_t i_ = 0;
-};
-
-/* interface */ class print_policy
-{
-    virtual void print(
-        std::ostream& s,
-        const std::string& key,
-        const std::shared_ptr<bson_element>& value
-    ) const = 0;
-};
-
-class document_print_policy: public print_policy
-{
-public:
-   void print(
-        std::ostream& s,
-        const std::string& key,
-        const std::shared_ptr<bson_element>& value
-    ) const final
-   {
-       s << "\"" << key << "\": " << value;
-   }
-
-   static constexpr std::string_view name = "bson_document";
-   static constexpr std::string_view open_bracket = "{";
-   static constexpr std::string_view close_bracket = "}";
-};
-
-class array_print_policy: public print_policy
-{
-public:
-   void print(
-        std::ostream& s,
-        const std::string& key,
-        const std::shared_ptr<bson_element>& value
-    ) const final
-   {
-       (void)key;
-
-       s << value;
-   }
-
-   static constexpr std::string_view name = "bson_array";
-   static constexpr std::string_view open_bracket = "[";
-   static constexpr std::string_view close_bracket = "]";
-};
-
-template <typename NamePolicy, typename PrintPolicy, char Id>
-class bson_document_base: public bson_element_base<Id>
-{
-    static_assert(
-        std::is_base_of<name_policy, NamePolicy>::value,
-        "NamePolicy is not derived from name_policy class"
-    );
-
-    static_assert(
-        std::is_base_of<print_policy, PrintPolicy>::value,
-        "PrintPolicy is not derived from print_policy class"
-    );
-
-public:
-    bson_document_base(std::istream& s);
-
-    void dump(std::ostream& s) const final;
-
-    std::uint32_t size(void) const final
-    {
-        return size_;
-    }
-
-private:
-    std::unordered_map<std::string, std::shared_ptr<bson_element>> elems_;
-
-    std::uint32_t size_;
-
-    NamePolicy name_policy_;
-
-    PrintPolicy print_policy_;
-};
+class document_print_policy;
+class array_print_policy;
 
 using bson_document =
     bson_document_base<no_name_policy, document_print_policy, 0x3>;
 using bson_array =
     bson_document_base<numeric_name_policy, array_print_policy, 0x4>;
-
-#define BSON_ELEM(Type) \
-{ Type::id(), [] (std::istream& s) { return std::make_shared<Type>(s); } }
 
 class bson
 {
@@ -230,22 +108,7 @@ public:
         return docs_.size();
     }
 
-    static auto factory(char id)
-    {
-        static const std::unordered_map<
-            char,
-            std::function<std::shared_ptr<bson_element>(std::istream&)>
-        > map {
-            BSON_ELEM(bson_double),
-            BSON_ELEM(bson_document),
-            BSON_ELEM(bson_boolean),
-            BSON_ELEM(bson_int32),
-            BSON_ELEM(bson_timestamp),
-            BSON_ELEM(bson_int64)
-        };
-
-        return map.at(id);
-    }
+    static auto factory(char id);
 
 private:
     std::vector<std::shared_ptr<bson_document>> docs_;
