@@ -1,4 +1,25 @@
-* Requirements
+* Types:
+  [X] double
+  [ ] string
+  [X] document
+  [X] array
+  [ ] binary
+  [ ] Undefined
+  [ ] ObjectId
+  [X] boolean
+  [ ] datetime
+  [ ] null
+  [X] regex
+  [ ] DBPointer
+  [ ] JavaScript
+  [ ] Symbol
+  [ ] JavaScript with scope
+  [X] int32
+  [X] timestamp
+  [X] int64
+  [/] decimal128 (WILL NOT IMPLEMENT)
+  [ ] Min key
+  [ ] Max key
 * Move bson_document impl. to a .hxx file (because of templates)
 * std::vector<char> version (to comply with requirements)
 * Tests
