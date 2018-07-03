@@ -31,8 +31,8 @@ std::string extract_cstring(std::istream& s)
     return str;
 }
 
-template <typename T, char U>
-bson_document<T, U>::bson_document(std::istream& s)
+template <typename T, typename U, char V>
+bson_document_base<T, U, V>::bson_document_base(std::istream& s)
 {
     // Add exception on EOF to prevent parsing errors
     s.exceptions(std::ios_base::failbit | std::ios_base::eofbit);
@@ -64,7 +64,7 @@ bson_document<T, U>::bson_document(std::istream& s)
          * Compiler may remove this call if policy is no_name_policy and
          * optimizations are on (because of final keyword on validate_name)
          */
-        policy_.validate_name(name);
+        name_policy_.validate_name(name);
 
         size += name.length() + 1;
 
@@ -78,21 +78,37 @@ bson_document<T, U>::bson_document(std::istream& s)
     throw std::runtime_error("Document exceeds given size");
 }
 
-template<typename T, char U>
-void bson_document<T, U>::dump(std::ostream& s) const
+template <typename T, typename U, char V>
+void bson_document_base<T, U, V>::dump(std::ostream& s) const
 {
-    s << "bson_document(" << elems_.size() << " fields) {" << std::endl;
+    s << print_policy_.name << "(" << elems_.size() << " fields) "
+        << print_policy_.open_bracket << std::endl;
 
-    for (auto const& [key, value]: elems_)
-        s << "\"" << key << "\": " << value << std::endl;
+    {
+        auto it = elems_.begin();
 
-    s << "}";
+        while (true)
+        {
+            print_policy_.print(s, it->first, it->second);
+
+            if (++it == elems_.end())
+            {
+                s << std::endl;
+
+                break;
+            }
+
+            s << "," << std::endl;
+        }
+    }
+
+    s << print_policy_.close_bracket;
 }
 
 bson::bson(std::istream& s)
 {
     while (s.peek() != std::istream::traits_type::eof())
-        docs_.emplace_back(std::make_shared<bson_document<>>(s));
+        docs_.emplace_back(std::make_shared<bson_document>(s));
 }
 
 void bson::dump(std::ostream& s) const

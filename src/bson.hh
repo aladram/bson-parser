@@ -100,7 +100,6 @@ public:
 
 private:
     std::string pattern_;
-
     std::string options_;
 };
 
@@ -133,16 +132,66 @@ private:
     std::uint32_t i_ = 0;
 };
 
-template <typename NamePolicy = no_name_policy, char Id = 0x3>
-class bson_document: public bson_element_base<Id>
+/* interface */ class print_policy
+{
+    virtual void print(
+        std::ostream& s,
+        const std::string& key,
+        const std::shared_ptr<bson_element>& value
+    ) const = 0;
+};
+
+class document_print_policy: public print_policy
+{
+public:
+   void print(
+        std::ostream& s,
+        const std::string& key,
+        const std::shared_ptr<bson_element>& value
+    ) const final
+   {
+       s << "\"" << key << "\": " << value;
+   }
+
+   static constexpr std::string_view name = "bson_document";
+   static constexpr std::string_view open_bracket = "{";
+   static constexpr std::string_view close_bracket = "}";
+};
+
+class array_print_policy: public print_policy
+{
+public:
+   void print(
+        std::ostream& s,
+        const std::string& key,
+        const std::shared_ptr<bson_element>& value
+    ) const final
+   {
+       (void)key;
+
+       s << value;
+   }
+
+   static constexpr std::string_view name = "bson_array";
+   static constexpr std::string_view open_bracket = "[";
+   static constexpr std::string_view close_bracket = "]";
+};
+
+template <typename NamePolicy, typename PrintPolicy, char Id>
+class bson_document_base: public bson_element_base<Id>
 {
     static_assert(
         std::is_base_of<name_policy, NamePolicy>::value,
         "NamePolicy is not derived from name_policy class"
     );
 
+    static_assert(
+        std::is_base_of<print_policy, PrintPolicy>::value,
+        "PrintPolicy is not derived from print_policy class"
+    );
+
 public:
-    bson_document(std::istream& s);
+    bson_document_base(std::istream& s);
 
     void dump(std::ostream& s) const final;
 
@@ -156,10 +205,15 @@ private:
 
     std::uint32_t size_;
 
-    NamePolicy policy_;
+    NamePolicy name_policy_;
+
+    PrintPolicy print_policy_;
 };
 
-using bson_array = bson_document<numeric_name_policy, 0x4>;
+using bson_document =
+    bson_document_base<no_name_policy, document_print_policy, 0x3>;
+using bson_array =
+    bson_document_base<numeric_name_policy, array_print_policy, 0x4>;
 
 #define BSON_ELEM(Type) \
 { Type::id(), [] (std::istream& s) { return std::make_shared<Type>(s); } }
@@ -183,7 +237,7 @@ public:
             std::function<std::shared_ptr<bson_element>(std::istream&)>
         > map {
             BSON_ELEM(bson_double),
-            BSON_ELEM(bson_document<>),
+            BSON_ELEM(bson_document),
             BSON_ELEM(bson_boolean),
             BSON_ELEM(bson_int32),
             BSON_ELEM(bson_timestamp),
@@ -194,5 +248,5 @@ public:
     }
 
 private:
-    std::vector<std::shared_ptr<bson_document<>>> docs_;
+    std::vector<std::shared_ptr<bson_document>> docs_;
 };
