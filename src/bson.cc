@@ -1,46 +1,27 @@
 #include "bson.hh"
 
 #include <cstdint>
+#include <functional>
 #include <ios>
 #include <istream>
-#include <memory>
 #include <ostream>
 #include <string>
 
 #include "bson-base.hh"
 #include "bson-document-base.hh"
-
-std::ostream& operator<<(std::ostream& os, bson_element& e)
-{
-    e.dump(os);
-
-    return os;
-}
-
-std::ostream& operator<<(std::ostream& os, bson_element* e)
-{
-    e->dump(os);
-
-    return os;
-}
-
-std::string extract_cstring(std::istream& s)
-{
-    std::string str;
-
-    while (char c = s.get())
-        str.push_back(c);
-
-    return str;
-}
+#include "bson-generic.hh"
+#include "bson-utils.hh"
 
 bson::bson(std::istream& s)
 {
     while (s.peek() != std::istream::traits_type::eof())
-        docs_.emplace_back(std::make_shared<bson_document>(s));
+        docs_.emplace_back(bson_document(s));
 }
 
-auto bson::factory(char id)
+#define BSON_ELEM(Type) \
+{ Type::id(), [] (std::istream& s) { return std::make_shared<Type>(s); } }
+
+auto bson_factory(char id)
 {
     static const std::unordered_map<
         char,
@@ -59,6 +40,6 @@ auto bson::factory(char id)
 
 void bson::dump(std::ostream& s) const
 {
-    for (auto doc: docs_)
+    for (const auto& doc: docs_)
         s << doc << std::endl;
 }

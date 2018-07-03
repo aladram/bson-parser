@@ -6,13 +6,10 @@
 #include <string>
 #include <type_traits>
 #include <unordered_map>
+#include <utility>
 
 #include "bson-base.hh"
-
-//TODO: Move in bson-utils.cc/hh
-std::ostream& operator<<(std::ostream& os, bson_element& e);
-std::ostream& operator<<(std::ostream& os, bson_element* e);
-std::string extract_cstring(std::istream& s);
+#include "bson-utils.hh"
 
 /* interface */ class name_policy
 {

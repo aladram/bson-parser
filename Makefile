@@ -9,6 +9,7 @@ VPATH = src:src/types
 FILES = \
         bson.cc \
         bson-parser.cc \
+        bson-utils.cc \
 
 OBJS = $(FILES:%.cc=%.o)
 
@@ -21,6 +22,7 @@ all: $(BIN)
 $(BIN): $(OBJS)
 
 release: CPPFLAGS += -DNDEBUG -Ofast -march=native
+release: LDFLAGS += -s
 release: all
 
 debug: CXXFLAGS += -g3 -O0

@@ -5,6 +5,7 @@
 #include <string>
 
 #include "bson.hh"
+#include "bson-generic.hh"
 
 template <typename T, typename U, char V>
 bson_document_base<T, U, V>::bson_document_base(std::istream& s)
@@ -43,7 +44,7 @@ bson_document_base<T, U, V>::bson_document_base(std::istream& s)
 
         size += name.length() + 1;
 
-        auto elem = bson::factory(c)(s);
+        auto elem = bson_factory(c)(s);
 
         size += elem->size();
 
