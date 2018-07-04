@@ -7,7 +7,7 @@
 #include "bson.hh"
 #include "bson-generic.hh"
 
-template <typename T, typename U, char V>
+template <typename T, typename U, std::uint8_t V>
 bson_document_base<T, U, V>::bson_document_base(std::istream& s)
 {
     // Add exception on EOF to prevent parsing errors
@@ -44,7 +44,7 @@ bson_document_base<T, U, V>::bson_document_base(std::istream& s)
 
         size += name.length() + 1;
 
-        auto elem = bson_factory(c)(s);
+        auto elem = bson_factory(static_cast<std::uint8_t>(c))(s);
 
         size += elem->size();
 
@@ -54,7 +54,7 @@ bson_document_base<T, U, V>::bson_document_base(std::istream& s)
     throw std::runtime_error("Document exceeds given size");
 }
 
-template <typename T, typename U, char V>
+template <typename T, typename U, std::uint8_t V>
 void bson_document_base<T, U, V>::dump(std::ostream& s) const
 {
     s << print_policy_.name << "(" << elems_.size() << " fields) "

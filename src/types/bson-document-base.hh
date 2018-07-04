@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <istream>
 #include <memory>
 #include <ostream>
@@ -85,7 +86,7 @@ public:
    static constexpr std::string_view close_bracket = "]";
 };
 
-template <typename NamePolicy, typename PrintPolicy, char Id>
+template <typename NamePolicy, typename PrintPolicy, std::uint8_t Id>
 class bson_document_base: public bson_element_base<Id>
 {
     static_assert(

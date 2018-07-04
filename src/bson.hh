@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <istream>
 #include <memory>
 #include <ostream>
@@ -9,8 +10,18 @@
 #include <vector>
 
 #include "bson-base.hh"
-#include "bson-utils.hh"
+#include "bson-dummy.hh"
 #include "bson-generic.hh"
+#include "bson-utils.hh"
+
+#define NEW_BSON_DUMMY(Id, Name) \
+static const char name_ ## Name[] = #Name; \
+using Name = bson_dummy<name_ ## Name, Id>
+
+NEW_BSON_DUMMY(0x6, bson_undefined);
+NEW_BSON_DUMMY(0xA, bson_null);
+NEW_BSON_DUMMY(0xFF, bson_min_key);
+NEW_BSON_DUMMY(0x7F, bson_max_key);
 
 #define NEW_BSON_TYPE(Id, Name, Type) \
 static const char name_ ## Name[] = "bson_"#Name; \
@@ -20,11 +31,12 @@ static_assert(sizeof(double) == 8, "double size required to be 8 bytes");
 
 NEW_BSON_TYPE(0x1, double, double);
 NEW_BSON_TYPE(0x8, boolean, std::uint8_t);
+NEW_BSON_TYPE(0x9, datetime, std::int64_t);
 NEW_BSON_TYPE(0x10, int32, std::int32_t);
 NEW_BSON_TYPE(0x11, timestamp, std::uint64_t);
 NEW_BSON_TYPE(0x12, int64, std::int64_t);
 
-auto bson_factory(char id);
+auto bson_factory(std::uint8_t id);
 
 #include "bson-document-base.hh"
 

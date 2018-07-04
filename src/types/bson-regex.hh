@@ -7,7 +7,7 @@
 #include "bson-base.hh"
 #include "bson-utils.hh"
 
-class bson_regex: bson_element_base<0xB>
+class bson_regex: public bson_element_base<0xB>
 {
 public:
     bson_regex(std::istream& s)

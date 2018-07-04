@@ -10,6 +10,8 @@ FILES = \
         bson.cc \
         bson-parser.cc \
         bson-utils.cc \
+        bson-string.cc \
+        bson-binary.cc \
 
 OBJS = $(FILES:%.cc=%.o)
 

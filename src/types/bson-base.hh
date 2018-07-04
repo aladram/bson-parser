@@ -11,11 +11,11 @@ public:
     virtual std::uint32_t size(void) const = 0;
 };
 
-template <char Id>
+template <std::uint8_t Id>
 /* abstract */ class bson_element_base: public bson_element
 {
 public:
-    static constexpr char id(void)
+    static constexpr std::uint8_t id(void)
     {
         return Id;
     }
